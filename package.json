@@ -1,0 +1,23 @@
+{
+  "name": "team-task-manager",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Interview-ready full-stack team task manager built with Next.js, Express, Prisma, and PostgreSQL.",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace apps/backend\" \"npm run dev --workspace apps/frontend\"",
+    "build": "npm run build --workspace apps/backend && npm run build --workspace apps/frontend",
+    "typecheck": "npm run typecheck --workspace apps/backend && npm run typecheck --workspace apps/frontend",
+    "lint": "npm run lint --workspace apps/frontend",
+    "db:generate": "npm run prisma:generate --workspace apps/backend",
+    "db:migrate": "npm run prisma:migrate --workspace apps/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
