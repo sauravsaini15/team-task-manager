@@ -23,3 +23,13 @@ export async function logout(_req: Request, res: Response) {
   clearAuthCookie(res);
   return res.status(204).send();
 }
+
+export async function forgotPassword(req: Request, res: Response) {
+  await authService.requestPasswordReset(req.body.email);
+  return res.json({ message: "If that email is registered, a reset link has been sent." });
+}
+
+export async function resetPassword(req: Request, res: Response) {
+  await authService.resetPassword(req.body.token, req.body.password);
+  return res.json({ message: "Password reset successfully. You can now log in." });
+}

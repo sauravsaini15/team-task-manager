@@ -93,9 +93,12 @@ GET    /api/health
 - `/signup`: account creation with validation.
 - `/login`: secure login.
 - `/dashboard`: project list, empty state, project creation.
-- `/projects/[projectId]`: analytics, task board, filters, member management, activity feed.
+- `/projects/[projectId]`: member workspace with assigned tasks, status updates, members, and activity.
+- `/projects/[projectId]/admin`: admin workspace with analytics, task management, member management, and activity.
 
 Admins can create projects, add/remove members, create/edit/delete tasks, assign users, and view all project tasks. Members can view their project and update the status of tasks assigned to them.
+
+The authenticated header includes a dark/light theme toggle. Theme preference is stored in `localStorage` and defaults to the user's system preference on first visit.
 
 ## Local Setup
 
@@ -242,7 +245,7 @@ curl -X PATCH http://localhost:4000/api/projects/<projectId>/tasks/<taskId>/stat
 - Authorization lives in backend services, so UI checks are convenience only, not security boundaries.
 - Prisma relations enforce project ownership, membership, task assignment, and cascading cleanup.
 - React Query handles server state, caching, invalidation, loading states, and optimistic-feeling refreshes.
-- The UI separates auth, dashboard, project workspace, and reusable shadcn-style primitives for easy explanation.
+- The UI separates auth, dashboard, admin workspace, member workspace, and reusable shadcn-style primitives for easy explanation.
 - Railway deployment is split into frontend, backend, and PostgreSQL services with environment-specific URLs.
 
 ## Development Roadmap

@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/features/auth/auth-provider";
 import { api, getErrorMessage } from "@/lib/api";
 import type { Project } from "@/lib/types";
 
@@ -35,6 +36,7 @@ export function DashboardHome() {
 }
 
 function ProjectList() {
+  const { user } = useAuth();
   const projectsQuery = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
@@ -70,30 +72,35 @@ function ProjectList() {
         </Card>
       ) : null}
       <div className="grid gap-4 md:grid-cols-2">
-        {projectsQuery.data?.map((project) => (
-          <Link key={project.id} href={`/projects/${project.id}`}>
-            <Card className="h-full transition-colors hover:border-primary/60 hover:bg-card/80">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <CardTitle>{project.name}</CardTitle>
-                    <CardDescription className="mt-2 line-clamp-2">
-                      {project.description || "No description added yet."}
-                    </CardDescription>
+        {projectsQuery.data?.map((project) => {
+          const myRole = project.members.find((member) => member.user.id === user?.id)?.role;
+          const projectHref = myRole === "ADMIN" ? `/projects/${project.id}/admin` : `/projects/${project.id}`;
+
+          return (
+            <Link key={project.id} href={projectHref}>
+              <Card className="h-full transition-colors hover:border-primary/60 hover:bg-card/80">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardTitle>{project.name}</CardTitle>
+                      <CardDescription className="mt-2 line-clamp-2">
+                        {project.description || "No description added yet."}
+                      </CardDescription>
+                    </div>
+                    <Badge variant={myRole === "ADMIN" ? "default" : "secondary"}>{myRole}</Badge>
                   </div>
-                  <Badge variant="secondary">{project._count?.tasks ?? 0} tasks</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="flex items-center justify-between text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  {project.members.length} members
-                </span>
-                <span>{new Date(project.updatedAt).toLocaleDateString()}</span>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+                </CardHeader>
+                <CardContent className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    {project.members.length} members
+                  </span>
+                  <span>{project._count?.tasks ?? 0} tasks</span>
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

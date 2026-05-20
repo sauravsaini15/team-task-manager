@@ -1,7 +1,10 @@
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
+import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
 import { HttpError } from "../../utils/http-error.js";
 import { signAuthToken } from "../../utils/jwt.js";
+import { sendPasswordResetEmail } from "../../utils/mailer.js";
 import type { loginSchema, signupSchema } from "./auth.validators.js";
 import type { z } from "zod";
 
@@ -48,4 +51,52 @@ export async function getCurrentUser(userId: string) {
 
   if (!user) throw new HttpError(404, "User not found");
   return user;
+}
+
+export async function requestPasswordReset(email: string) {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) return;
+
+  await prisma.passwordResetToken.updateMany({
+    where: { userId: user.id, used: false },
+    data: { used: true }
+  });
+
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+  await prisma.passwordResetToken.create({
+    data: {
+      token: rawToken,
+      userId: user.id,
+      expiresAt
+    }
+  });
+
+  const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${rawToken}`;
+  await sendPasswordResetEmail(user.email, resetUrl);
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  const record = await prisma.passwordResetToken.findUnique({
+    where: { token },
+    include: { user: true }
+  });
+
+  if (!record) throw new HttpError(400, "Invalid or expired reset link");
+  if (record.used) throw new HttpError(400, "This reset link has already been used");
+  if (record.expiresAt < new Date()) throw new HttpError(400, "Reset link has expired");
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: record.userId },
+      data: { passwordHash }
+    }),
+    prisma.passwordResetToken.update({
+      where: { id: record.id },
+      data: { used: true }
+    })
+  ]);
 }

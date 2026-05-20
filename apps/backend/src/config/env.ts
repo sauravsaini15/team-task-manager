@@ -14,7 +14,14 @@ const envSchema = z.object({
   COOKIE_SECURE: z
     .preprocess((value) => value === true || value === "true", z.boolean())
     .default(false),
-  COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax")
+  COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
+  SMTP_HOST: z.string().default("smtp.gmail.com"),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z
+    .preprocess((value) => value === true || value === "true", z.boolean())
+    .default(false),
+  SMTP_USER: z.string().email(),
+  SMTP_PASS: z.string().min(1)
 });
 
 export const env = envSchema.parse(process.env);

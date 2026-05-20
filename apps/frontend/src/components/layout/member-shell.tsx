@@ -1,24 +1,41 @@
 "use client";
 
-import { CheckCircle2, LayoutDashboard, LogOut } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { CheckCircle2, LayoutDashboard, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import * as React from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAuth } from "@/features/auth/auth-provider";
+import { api } from "@/lib/api";
+import type { Project } from "@/lib/types";
 
-export function ProtectedShell({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, logout } = useAuth();
+export function MemberShell({ children }: { children: React.ReactNode }) {
+  const { user, isLoading: authLoading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const params = useParams<{ projectId?: string }>();
+  const projectId = params.projectId;
+
+  const projectQuery = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: async () => {
+      const { data } = await api.get<{ project: Project }>(`/projects/${projectId}`);
+      return data.project;
+    },
+    enabled: !!projectId && !!user
+  });
+
+  const myRole = projectQuery.data?.members.find((member) => member.user.id === user?.id)?.role;
 
   React.useEffect(() => {
-    if (!isLoading && !user) router.push("/login");
-  }, [isLoading, router, user]);
+    if (!authLoading && !user) router.push("/login");
+  }, [authLoading, router, user]);
 
-  if (isLoading || !user) {
+  if (authLoading || projectQuery.isLoading || !user) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-4 p-6">
         <Skeleton className="h-14 w-full" />
@@ -44,7 +61,19 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
                 Dashboard
               </Link>
             </Button>
-            <span className="hidden text-sm text-muted-foreground sm:inline">{user.name}</span>
+            <Badge variant="secondary" className="hidden h-8 items-center gap-1.5 sm:inline-flex">
+              <UserRound className="h-4 w-4" />
+              Member View
+            </Badge>
+            {projectId && myRole === "ADMIN" ? (
+              <Button asChild variant="ghost" size="sm" className="hidden text-primary md:inline-flex">
+                <Link href={`/projects/${projectId}/admin`}>
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Switch to Admin Panel
+                </Link>
+              </Button>
+            ) : null}
+            <span className="hidden text-sm text-muted-foreground lg:inline">{user.name}</span>
             <ThemeToggle />
             <Button variant="ghost" size="icon" aria-label="Log out" onClick={() => void logout()}>
               <LogOut className="h-4 w-4" />

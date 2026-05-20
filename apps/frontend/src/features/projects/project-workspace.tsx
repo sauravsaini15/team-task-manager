@@ -2,7 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CalendarClock, CheckCircle2, Circle, Clock3, Filter, Plus, Trash2, UserPlus } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, Circle, Clock3, Filter, Plus, ShieldCheck, Trash2, UserPlus } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -43,15 +44,17 @@ type Filters = {
   priority: "" | TaskPriority;
 };
 
+type WorkspaceMode = "admin" | "member";
+
 export function ProjectWorkspace({ projectId }: { projectId: string }) {
   return (
     <ProtectedShell>
-      <ProjectWorkspaceInner projectId={projectId} />
+      <ProjectWorkspaceContent projectId={projectId} mode="member" />
     </ProtectedShell>
   );
 }
 
-function ProjectWorkspaceInner({ projectId }: { projectId: string }) {
+export function ProjectWorkspaceContent({ projectId, mode }: { projectId: string; mode: WorkspaceMode }) {
   const { user } = useAuth();
   const [filters, setFilters] = React.useState<Filters>({ status: "", priority: "" });
   const queryClient = useQueryClient();
@@ -96,6 +99,7 @@ function ProjectWorkspaceInner({ projectId }: { projectId: string }) {
   const project = projectQuery.data;
   const myRole = project?.members.find((member) => member.user.id === user?.id)?.role;
   const isAdmin = myRole === "ADMIN";
+  const canManage = mode === "admin";
 
   if (projectQuery.isLoading) {
     return (
@@ -119,8 +123,18 @@ function ProjectWorkspaceInner({ projectId }: { projectId: string }) {
       <section className="flex flex-col gap-4 rounded-lg border bg-card p-5 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge>{myRole}</Badge>
+            <Badge variant={mode === "admin" ? "default" : "secondary"}>{mode === "admin" ? "Admin Space" : "Member View"}</Badge>
+            <Badge variant="secondary">{myRole}</Badge>
             <span className="text-sm text-muted-foreground">{project.members.length} members</span>
+            {mode === "member" && isAdmin ? (
+              <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-primary">
+                <Link href={`/projects/${project.id}/admin`}>
+                  <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+                  Switch to Admin Panel
+                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            ) : null}
           </div>
           <h1 className="mt-3 text-3xl font-semibold tracking-normal">{project.name}</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{project.description || "No project description yet."}</p>
@@ -135,13 +149,13 @@ function ProjectWorkspaceInner({ projectId }: { projectId: string }) {
           projectId={projectId}
           tasks={tasksQuery.data ?? []}
           members={project.members}
-          isAdmin={isAdmin}
+          isAdmin={canManage}
           isLoading={tasksQuery.isLoading}
           onChanged={invalidateWorkspace}
         />
         <aside className="space-y-6">
-          {isAdmin ? <CreateTaskPanel projectId={projectId} project={project} onCreated={invalidateWorkspace} /> : null}
-          {isAdmin ? <MembersPanel project={project} onChanged={invalidateWorkspace} /> : <MembersReadOnly project={project} />}
+          {canManage ? <CreateTaskPanel projectId={projectId} project={project} onCreated={invalidateWorkspace} /> : null}
+          {canManage ? <MembersPanel project={project} onChanged={invalidateWorkspace} /> : <MembersReadOnly project={project} />}
           <ActivityPanel dashboard={dashboardQuery.data} />
         </aside>
       </div>

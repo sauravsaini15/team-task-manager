@@ -72,7 +72,18 @@ export function AuthCard({ mode }: AuthCardProps) {
               <FieldError message={form.formState.errors.email?.message} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                {!isSignup ? (
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
+                    tabIndex={-1}
+                  >
+                    Forgot password?
+                  </Link>
+                ) : null}
+              </div>
               <Input id="password" type="password" autoComplete={isSignup ? "new-password" : "current-password"} {...form.register("password")} />
               <FieldError message={form.formState.errors.password?.message} />
             </div>
